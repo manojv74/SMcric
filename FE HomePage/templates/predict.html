@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cricket Match Prediction</title>
+    <link href="{{ url_for('static', filename='css/predict.css') }}" rel="stylesheet">
+    <script src="{{ url_for('static', filename='js/predict.js') }}" defer></script>
+</head>
+<body>
+    <div class="prediction-container">
+        <div class="header">
+            <h1>Cricket Match Prediction</h1>
+        </div>
+
+        <div id="error-message" class="error-message" style="display:none;"></div>
+
+        <div class="team-selection">
+            <div class="team">
+                <label for="team1">Select Team 1:</label>
+                <select id="team1">
+                    <option value="" disabled selected>Select Team 1</option>
+                    {% for team in teams %}
+                    <option value="{{ team.name }}">{{ team.icon }} {{ team.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="team">
+                <label for="team2">Select Team 2:</label>
+                <select id="team2">
+                    <option value="" disabled selected>Select Team 2</option>
+                    {% for team in teams %}
+                    <option value="{{ team.name }}">{{ team.icon }} {{ team.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="additional-inputs">
+            <div class="input-group">
+                <label for="city">Select City:</label>
+                <select id="city">
+                    <option value="" disabled selected>Select City</option>
+                    {% for city in cities %}
+                    <option value="{{ city }}">{{ city }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="required-runs">Required Runs:</label>
+                <input type="number" id="required-runs" placeholder="Enter required runs">
+            </div>
+
+            <div class="input-group">
+                <label for="required-overs">Required Overs:</label>
+                <input type="number" id="required-overs" placeholder="Enter required overs">
+            </div>
+
+            <div class="input-group">
+                <label for="required-wickets">Required Wickets:</label>
+                <input type="number" id="required-wickets" placeholder="Enter required wickets">
+            </div>
+        </div>
+
+        <div class="button-container">
+            <button class="predict-button" onclick="predict()">Predict</button>
+        </div>
+
+        <div id="win-probability" class="win-probability" style="display:none;">
+            <h2>Win Probability</h2>
+            <div id="probability-chart"></div>
+        </div>
+    </div>
+</body>
+</html>

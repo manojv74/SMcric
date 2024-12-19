@@ -1,0 +1,190 @@
+body {
+    background-color: #f3f4f6;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.prediction-container {
+    width: 60%;
+    margin: 50px auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.header h1 {
+    font-size: 2.2rem;
+    color: #333;
+}
+
+.team-selection {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.team {
+    width: 45%;
+}
+
+label {
+    font-weight: bold;
+    margin-bottom: 5px;
+    display: block;
+    color: #555;
+}
+
+select, input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+}
+
+select:focus, input:focus {
+    border-color: #4caf50;
+}
+
+.additional-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.button-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.predict-button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background: linear-gradient(to right, #4caf50, #45a049);
+    color: white;
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.3s;
+}
+
+.predict-button:hover {
+    background: linear-gradient(to right, #45a049, #3e8e41);
+    transform: translateY(-2px);
+}
+
+#error-message {
+    text-align: center;
+    color: white;
+    background-color: #f44336;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.win-probability {
+    margin-top: 30px;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+#probability-chart {
+    height: 80px;
+    position: relative;
+    transition: all 0.5s ease-in-out;
+}
+
+.win-probability-header {
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.probability-bar-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.probability-bar-background {
+    width: 80%;
+    height: 20px;
+    background-color: #e0e0e0;
+    border-radius: 10px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.probability-bar {
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(to right, #4caf50 0%, #45a049 100%);
+    transition: width 0.5s ease-in-out;
+}
+
+.team-name {
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+}
+
+.left {
+    text-align: left;
+    margin-right: 10px;
+}
+
+.right {
+    text-align: right;
+    margin-left: 10px;
+}
+
+.probability-text {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+}
+
+.probability-text span:nth-child(1) {
+    color: #4caf50;
+}
+
+.probability-text span:nth-child(2) {
+    color: #f44336;
+}
+
+@media (max-width: 768px) {
+    .prediction-container {
+        width: 90%;
+    }
+
+    .team-selection {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .additional-inputs {
+        grid-template-columns: 1fr;
+    }
+
+    .probability-bar-container {
+        flex-direction: column;
+        align-items: center;
+    }
+}

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cricket Match Prediction</title>
+    <link href="{{ url_for('static', filename='css/predict.css') }}" rel="stylesheet">
+    <script src="{{ url_for('static', filename='js/predict.js') }}" defer></script>
+</head>
+<body>
+    <div class="prediction-container">
+        <div class="header">
+            <h1>Cricket Match Prediction</h1>
+        </div>
+
+        <!-- Error message display -->
+        <div id="error-message" class="error-message" style="display:none;">Error occurred while fetching data</div>
+
+        <!-- Team Selection -->
+        <div class="team-selection">
+            <div class="team">
+                <label for="team1">Select Team 1:</label>
+                <select id="team1" onchange="updateTossOptions()">
+                    <option value="" disabled selected>Select Team 1</option>
+                    <!-- Populated via JavaScript -->
+                </select>
+            </div>
+            
+            <div class="team">
+                <label for="team2">Select Team 2:</label>
+                <select id="team2" onchange="updateTossOptions()">
+                    <option value="" disabled selected>Select Team 2</option>
+                    <!-- Populated via JavaScript -->
+                </select>
+            </div>
+        </div>
+        
+        <!-- Additional Inputs -->
+        <div class="additional-inputs">
+            <div class="input-group">
+                <label for="city">Select City:</label>
+                <select id="city">
+                    <option value="" disabled selected>Select City</option>
+                    <!-- Populated via JavaScript -->
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="required-runs">Required Runs:</label>
+                <input type="number" id="required-runs" placeholder="Enter required runs">
+            </div>
+
+            <div class="input-group">
+                <label for="required-overs">Target Overs:</label>
+                <input type="number" id="required-overs" placeholder="Enter Target overs">
+            </div>
+
+            <div class="input-group">
+                <label for="required-wickets">Required Wickets:</label>
+                <input type="number" id="required-wickets" placeholder="Enter required wickets">
+            </div>
+
+            <!-- Toss Winner Selection -->
+            <div class="input-group">
+                <label for="toss-winner">Toss Winner:</label>
+                <select id="toss-winner">
+                    <option value="" disabled selected>Select Toss Winner</option>
+                    <!-- Populated via JavaScript -->
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="toss-decision">Toss Decision:</label>
+                <select id="toss-decision">
+                    <option value="" disabled selected>Select Toss Decision</option>
+                    <option value="Bat">Bat</option>
+                    <option value="Bowl">Bowl</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="target-runs">Target Runs (optional):</label>
+                <input type="number" id="target-runs" placeholder="Enter target runs if applicable">
+            </div>
+        </div>
+
+        <!-- Button -->
+        <div class="button-container">
+            <button class="predict-button" type="button" onclick="predict()">Predict</button>
+        </div>
+
+        <!-- Prediction result -->
+        <div id="win-probability" class="win-probability" style="display:none;">
+            <h2>Win Probability</h2>
+            <div id="probability-chart"></div>
+        </div>
+    </div>
+
+    <!-- Match Details -->
+    <div id="dataBox" class="details-box" style="display:none;">
+        <h3>Match Details</h3>
+        <p>Toss Winner: <span id="toss-winner-display"></span></p>
+        <p>Toss Decision: <span id="toss-decision-display"></span></p>
+        <p>Result: <span id="result-display"></span></p>
+        <p>Margin: <span id="margin-display"></span></p>
+    </div>
+</body>
+</html>

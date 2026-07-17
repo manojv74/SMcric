@@ -1,104 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cricket Match Prediction</title>
-    <link href="{{ url_for('static', filename='css/predict.css') }}" rel="stylesheet">
-    <script src="{{ url_for('static', filename='js/predict.js') }}" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#07110d">
+  <meta name="description" content="Estimate an IPL match outcome from the current chase situation.">
+  <title>Match Predictor | SMcric</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/predict.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/predict-refinement.css') }}" rel="stylesheet">
+  <script src="{{ url_for('static', filename='js/predict.js') }}" defer></script>
 </head>
 <body>
-    <div class="prediction-container">
-        <div class="header">
-            <h1>Cricket Match Prediction</h1>
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <div class="ambient ambient-two" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <nav class="nav-shell" aria-label="Main navigation">
+      <a class="brand" href="/" aria-label="SMcric home"><span class="brand-mark">S</span><span>SM<span>cric</span></span></a>
+      <div class="nav-links"><a href="/">Home</a><a class="active" href="/predict">Predictor</a></div>
+    </nav>
+  </header>
+
+  <main class="page-shell">
+    <section class="page-intro">
+      <div><span class="eyebrow"><i></i> IPL match intelligence</span><h1>Read the chase.<br><span>Estimate the outcome.</span></h1></div>
+      <p>Enter the current second-innings situation. SMcric combines historical match patterns with a bounded chase estimate.</p>
+    </section>
+
+    <div class="workspace-grid">
+      <section class="form-card" aria-labelledby="form-title">
+        <div class="card-heading"><span>01</span><div><h2 id="form-title">Match situation</h2><p>All fields are required.</p></div></div>
+        <div id="error-summary" class="error-summary" role="alert" tabindex="-1" hidden></div>
+        <form id="prediction-form" novalidate>
+          <fieldset>
+            <legend>Match setup</legend>
+            <div class="field-grid">
+              <div class="field"><label for="team1">Team 1</label><select id="team1" name="team1" required><option value="">Choose team</option></select><small class="field-error" id="team1-error"></small></div>
+              <div class="field"><label for="team2">Team 2</label><select id="team2" name="team2" required><option value="">Choose team</option></select><small class="field-error" id="team2-error"></small></div>
+              <div class="field field-wide"><label for="city">City / venue</label><select id="city" name="city" required><option value="">Choose city</option></select><small class="field-error" id="city-error"></small></div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Toss</legend>
+            <div class="field-grid">
+              <div class="field"><label for="toss_winner">Toss winner</label><select id="toss_winner" name="toss_winner" required disabled><option value="">Select teams first</option></select><small class="field-error" id="toss_winner-error"></small></div>
+              <div class="field"><label for="toss_decision">Decision</label><select id="toss_decision" name="toss_decision" required><option value="">Choose decision</option><option value="bat">Bat</option><option value="field">Field</option></select><small class="field-error" id="toss_decision-error"></small></div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Chase situation</legend>
+            <div class="field-grid">
+              <div class="field"><label for="target_runs">Target runs</label><input id="target_runs" name="target_runs" type="number" min="1" max="400" step="1" placeholder="e.g. 181" required><small class="field-error" id="target_runs-error"></small></div>
+              <div class="field"><label for="required_runs">Required runs</label><input id="required_runs" name="required_runs" type="number" min="0" max="400" step="1" placeholder="e.g. 42" required><small class="field-error" id="required_runs-error"></small></div>
+              <div class="field"><label for="balls_remaining">Balls remaining</label><input id="balls_remaining" name="balls_remaining" type="number" min="1" max="120" step="1" placeholder="e.g. 28" required><span class="field-help">Use balls to avoid cricket-decimal confusion.</span><small class="field-error" id="balls_remaining-error"></small></div>
+              <div class="field"><label for="wickets_remaining">Wickets remaining</label><input id="wickets_remaining" name="wickets_remaining" type="number" min="0" max="10" step="1" placeholder="e.g. 6" required><small class="field-error" id="wickets_remaining-error"></small></div>
+            </div>
+          </fieldset>
+
+          <div class="live-metrics"><div><span>Required run rate</span><strong id="rrr-preview">—</strong></div><p>Calculated automatically from required runs and balls remaining.</p></div>
+          <button class="predict-button" id="predict-button" type="submit"><span class="button-label">Calculate probability</span><span class="spinner" aria-hidden="true"></span><b aria-hidden="true">→</b></button>
+        </form>
+      </section>
+
+      <aside class="result-card" id="result-card" aria-labelledby="result-title" tabindex="-1">
+        <div class="card-heading"><span>02</span><div><h2 id="result-title">Win probability</h2><p id="result-status">Complete the match situation to see an estimate.</p></div></div>
+        <div class="empty-result" id="empty-result">
+          <div class="preview-match" aria-hidden="true">
+            <span id="preview-team1">Team 1</span>
+            <b>VS</b>
+            <span id="preview-team2">Team 2</span>
+          </div>
         </div>
-
-        <!-- Error message display -->
-        <div id="error-message" class="error-message" style="display:none;">Error occurred while fetching data</div>
-
-        <!-- Team Selection -->
-        <div class="team-selection">
-            <div class="team">
-                <label for="team1">Select Team 1:</label>
-                <select id="team1" onchange="updateTossOptions()">
-                    <option value="" disabled selected>Select Team 1</option>
-                </select>
-            </div>
-            
-            <div class="team">
-                <label for="team2">Select Team 2:</label>
-                <select id="team2" onchange="updateTossOptions()">
-                    <option value="" disabled selected>Select Team 2</option>
-                </select>
-            </div>
+        <div class="prediction-result" id="prediction-result" hidden>
+          <div class="result-teams"><div><span class="team-badge" id="team1-badge">T1</span><strong id="team1-result">Team 1</strong><b id="team1-probability">0%</b></div><span>VS</span><div><span class="team-badge alt" id="team2-badge">T2</span><strong id="team2-result">Team 2</strong><b id="team2-probability">0%</b></div></div>
+          <div class="probability-track" aria-label="Team 1 probability"><span id="probability-bar"></span></div>
+          <div class="winner-call"><span>Estimated advantage</span><strong id="predicted-winner">—</strong></div>
+          <div class="context-grid"><div><span>Need</span><strong id="context-runs">—</strong></div><div><span>Remaining</span><strong id="context-balls">—</strong></div><div><span>Wickets</span><strong id="context-wickets">—</strong></div><div><span>Required rate</span><strong id="context-rrr">—</strong></div></div>
+          <div class="result-meta"><span>Model <b id="model-version">—</b></span><span>Inference <b id="latency">—</b></span></div>
+          <p class="disclaimer" id="disclaimer">This is an estimate, not a guaranteed outcome.</p>
         </div>
-        
-        <!-- Additional Inputs -->
-        <div class="additional-inputs">
-            <div class="input-group">
-                <label for="city">Select City:</label>
-                <select id="city">
-                    <option value="" disabled selected>Select City</option>
-                </select>
-            </div>
-
-            <div class="input-group">
-                <label for="required_runs">Required Runs:</label>
-                <input type="number" id="required_runs" placeholder="Enter required runs">
-            </div>
-
-            <div class="input-group">
-                <label for="remaining_overs">Remaining Overs:</label>
-                <input type="number" id="remaining_overs" placeholder="Enter remaining overs">
-            </div>
-
-            <div class="input-group">
-                <label for="remaining_wickets">Remaining Wickets:</label>
-                <input type="number" id="remaining_wickets" placeholder="Enter remaining wickets">
-            </div>
-
-            <!-- Toss Winner Selection -->
-            <div class="input-group">
-                <label for="toss_winner">Toss Winner:</label>
-                <select id="toss_winner">
-                    <option value="" disabled selected>Select Toss Winner</option>
-                </select>
-            </div>
-
-            <div class="input-group">
-                <label for="toss_decision">Toss Decision:</label>
-                <select id="toss_decision">
-                    <option value="" disabled selected>Select Toss Decision</option>
-                    <option value="bat">Bat</option>
-                    <option value="field">Field</option>
-                </select>
-            </div>
-
-            <div class="input-group">
-                <label for="target_runs">Target Runs:</label>
-                <input type="number" id="target_runs" placeholder="Enter target runs">
-            </div>
-        </div>
-
-        <!-- Button -->
-        <div class="button-container">
-            <button class="predict-button" onclick="predict()">Predict</button>
-        </div>
-
-        <!-- Prediction Result -->
-        <div id="win-probability" class="win-probability" style="display:none;">
-            <h2>Win Probability</h2>
-            <div id="probability-chart"></div>
-        </div>
+      </aside>
     </div>
-
-    <!-- Match Details -->
-    <div id="dataBox" class="details-box" style="display:none;">
-        <h3>Match Details</h3>
-        <p>Toss Winner: <span id="toss-winner-display"></span></p>
-        <p>Toss Decision: <span id="toss-decision-display"></span></p>
-        <p>Result: <span id="result-display"></span></p>
-        <p>Margin: <span id="margin-display"></span></p>
-    </div>
+  </main>
 </body>
 </html>

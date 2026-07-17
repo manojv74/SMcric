@@ -1,0 +1,26 @@
+/* Interactive enhancement layer for the SMcric homepage */
+:root{--mouse-x:50vw;--mouse-y:20vh}
+.scroll-progress{position:fixed;z-index:500;top:0;left:0;width:0;height:2px;background:linear-gradient(90deg,var(--green),var(--lime));box-shadow:0 0 14px var(--green)}
+.cursor-glow{position:fixed;z-index:-1;left:var(--mouse-x);top:var(--mouse-y);width:500px;height:500px;transform:translate(-50%,-50%);pointer-events:none;background:radial-gradient(circle,rgba(67,237,131,.07),transparent 67%)}
+.match-ticker{position:relative;overflow:hidden;border-bottom:1px solid var(--line);background:#09150f;color:#789184;font-size:9px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase}
+.ticker-track{width:max-content;display:flex;gap:56px;padding:10px 0;animation:ticker 28s linear infinite}
+.ticker-track span{display:flex;align-items:center;gap:9px}
+.ticker-track i{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+.orbit{position:absolute;inset:5%;border:1px dashed rgba(67,237,131,.12);border-radius:50%;animation:spin 22s linear infinite}
+.orbit-two{inset:-4%;animation-direction:reverse;animation-duration:32s}
+.orbit span{position:absolute;left:50%;top:-4px;width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 16px var(--green)}
+.floating-chip{position:absolute;z-index:3;display:flex;flex-direction:column;gap:2px;min-width:92px;padding:11px 14px;background:rgba(13,29,20,.9);border:1px solid rgba(67,237,131,.2);border-radius:13px;box-shadow:0 16px 40px rgba(0,0,0,.35);backdrop-filter:blur(10px);animation:float 4s ease-in-out infinite}
+.floating-chip span{color:var(--muted);font-size:8px;text-transform:uppercase;letter-spacing:1px}
+.floating-chip strong{font-family:"Space Grotesk";font-size:14px}
+.chip-one{left:-5px;top:24%;transform:rotate(-4deg)}
+.chip-two{right:-7px;bottom:19%;transform:rotate(3deg);animation-delay:-2s}
+.chip-two strong{color:var(--green)}
+#match-panel{overflow:hidden;transition:transform .18s ease-out}
+.panel-scan{position:absolute;left:0;right:0;top:-80px;height:70px;background:linear-gradient(transparent,rgba(67,237,131,.08),transparent);animation:scan 6s ease-in-out infinite;pointer-events:none}
+.probability-track span{box-shadow:0 0 18px rgba(67,237,131,.45);transition:width .8s cubic-bezier(.2,.8,.2,1)}
+@keyframes ticker{to{transform:translateX(-50%)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes float{50%{margin-top:-9px}}
+@keyframes scan{0%,15%{top:-80px}70%,100%{top:110%}}
+@media(max-width:650px){.cursor-glow,.orbit,.floating-chip{display:none}}
+@media(prefers-reduced-motion:reduce){.ticker-track,.orbit,.floating-chip,.panel-scan{animation:none!important}}

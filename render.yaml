@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: smcric
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn mn:app
+    healthCheckPath: /health
+    envVars:
+      - key: RAPIDAPI_KEY
+        sync: false

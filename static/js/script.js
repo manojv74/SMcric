@@ -66,15 +66,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { threshold: .7 });
   document.querySelectorAll('[data-count]').forEach(counter => countObserver.observe(counter));
 
-  const demoValues = [64, 58, 71, 67];
-  let demoIndex = 0;
-  setInterval(() => {
-    demoIndex = (demoIndex + 1) % demoValues.length;
-    const value = demoValues[demoIndex];
-    document.getElementById('demo-probability').textContent = `${value}%`;
-    document.getElementById('demo-probability-bar').style.width = `${value}%`;
-  }, 3200);
-
   const initials = name => (name || '—').replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase();
   const inningsText = score => {
     const innings = score?.inngs1 || score?.inngs2;

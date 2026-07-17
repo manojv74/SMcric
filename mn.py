@@ -1,8 +1,12 @@
+import csv
+import os
+from pathlib import Path
+from threading import Lock
+
+import joblib
 import requests
-import joblib,os
 from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
-import csv
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
@@ -11,12 +15,17 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import xgboost as xgb
-from sklearn.pipeline import Pipeline
 from sklearn.feature_selection import SelectFromModel
 import warnings
 warnings.filterwarnings('ignore')
 app = Flask(__name__)
 CORS(app)
+
+BASE_DIR = Path(__file__).resolve().parent
+DATA_PATH = BASE_DIR / 'output2.csv'
+MODEL_PATH = BASE_DIR / 'predictor_bundle.pkl'
+_predictor = None
+_predictor_lock = Lock()
 
 
 class IPLWinPredictor:
@@ -319,8 +328,16 @@ class IPLWinPredictor:
             joblib.dump({
                 'model': self.model,
                 'scaler': self.scaler,
+                'selector': self.selector,
                 'le_team': self.le_team,
-                'le_toss_decision': self.le_toss_decision }, 'predictor_bundle.pkl')
+                'le_city': self.le_city,
+                'le_toss_decision': self.le_toss_decision,
+                'known_teams': self.known_teams,
+                'known_cities': self.known_cities,
+                'known_toss_decisions': self.known_toss_decisions,
+                'team_stats': self.team_stats,
+                'venue_stats': self.venue_stats,
+            }, MODEL_PATH)
             return {
                 'accuracy': accuracy,
                 'cv_scores': cv_scores,
@@ -464,56 +481,51 @@ class IPLWinPredictor:
                     'team2_win_probability': 0.5
                 }
 
-def main(match_info):
-    # Load your cleaned IPL dataset
-    df = pd.read_csv('output2.csv')
-    
-    # Initialize and train the predictor
-    predictor = IPLWinPredictor(model_type='xgboost')
-    results = predictor.train(df, tune_hyperparams=True)
-    
-    #print(f"Model Accuracy: {accuracy:.2f}")
-   # print("\nClassification Report:")
-    #print(report)
-    #print("\nFeature Importance:")
-    #for feature, importance in sorted(feature_importance.items(), key=lambda x: x[1], reverse=True):
-       # print(f"{feature}: {importance:.4f}")
-    
-    """try:
-        probabilities = predictor.predict_win_probability(match_info)
-        response = {
-            "team1": match_info['team1'],
-            "team2": match_info['team2'],
-            "team1_win_probability": probabilities['team1_win_probability']*100,
-            "team2_win_probability": probabilities['team2_win_probability']*100,
-        }
-    except Exception as e:
-        print(f"Error in prediction: {str(e)}")
+def load_predictor():
+    """Load the predictor once per server process, training only as a fallback."""
+    global _predictor
+    if _predictor is not None:
+        return _predictor
 
-    return jsonify(response)"""
-    if os.path.exists('predictor_bundle.pkl'):
-        # ✅ Load saved model and components
-        bundle = joblib.load('predictor_bundle.pkl')
-        predictor.model = bundle['model']
-        predictor.scaler = bundle['scaler']
-        predictor.le_team = bundle['le_team']
-        predictor.le_toss_decision = bundle['le_toss_decision']
-        predictor.fit_encoders(df)  # in case you still use known_teams for safety
-    else:
-        # 🔁 First time: train and save
-        results = predictor.train(df, tune_hyperparams=True)
-        # saving handled inside train()
+    with _predictor_lock:
+        if _predictor is not None:
+            return _predictor
 
-    # Now use predictor to make predictions
+        if not DATA_PATH.exists():
+            raise FileNotFoundError(f'Dataset not found: {DATA_PATH}')
+
+        predictor = IPLWinPredictor(model_type='xgboost')
+        df = pd.read_csv(DATA_PATH)
+
+        try:
+            bundle = joblib.load(MODEL_PATH)
+            required_keys = {
+                'model', 'scaler', 'selector', 'le_team', 'le_city',
+                'le_toss_decision', 'known_teams', 'known_cities',
+                'known_toss_decisions', 'team_stats', 'venue_stats'
+            }
+            if not required_keys.issubset(bundle):
+                raise ValueError('Saved model bundle is incomplete')
+
+            for key in required_keys:
+                setattr(predictor, key, bundle[key])
+        except (FileNotFoundError, KeyError, ValueError, AttributeError) as exc:
+            app.logger.warning('Retraining predictor because it could not be loaded: %s', exc)
+            predictor.train(df, tune_hyperparams=False)
+
+        _predictor = predictor
+        return _predictor
+
+
+def generate_prediction(match_info):
+    predictor = load_predictor()
     probabilities = predictor.predict_win_probability(match_info)
-    response = {
+    return {
         "team1": match_info['team1'],
         "team2": match_info['team2'],
-        "team1_win_probability": probabilities['team1_win_probability'] * 100,
-        "team2_win_probability": probabilities['team2_win_probability'] * 100,
+        "team1_win_probability": round(float(probabilities['team1_win_probability']) * 100, 2),
+        "team2_win_probability": round(float(probabilities['team2_win_probability']) * 100, 2),
     }
-
-    return jsonify(response)
 
 # Helper function to read CSV data
 def read_csv_data(file_path):
@@ -548,7 +560,7 @@ def read_csv_data(file_path):
 @app.route('/dropdown_data', methods=['GET'])
 def dropdown_data():
     try:
-        csv_file_path = r'output2.csv'
+        csv_file_path = DATA_PATH
 
         # Read team1, team2, and cities from the CSV file
         team1, team2, cities = read_csv_data(csv_file_path)
@@ -593,11 +605,21 @@ def predict_result():
         if missing_fields:
             return jsonify({"error": "Missing required fields", "fields": missing_fields}), 400
 
+        if data['team1'] == data['team2']:
+            return jsonify({"error": "Team 1 and Team 2 must be different"}), 400
+
         # Convert numeric fields
         required_runs = int(data.get('required_runs', 0))
         remaining_overs = float(data.get('remaining_overs', 0))
         remaining_wickets = int(data.get('remaining_wickets', 0))
         target_runs = int(data.get('target_runs', 0))
+
+        if required_runs < 0 or target_runs <= 0:
+            return jsonify({"error": "Runs must contain valid positive values"}), 400
+        if not 0 < remaining_overs <= 20:
+            return jsonify({"error": "Remaining overs must be between 0 and 20"}), 400
+        if not 0 <= remaining_wickets <= 10:
+            return jsonify({"error": "Remaining wickets must be between 0 and 10"}), 400
 
         match_info = {
             'team1': data['team1'],
@@ -613,8 +635,7 @@ def predict_result():
         }
 
         # Get predictions from the model
-        predictionf = main(match_info)
-        return predictionf
+        return jsonify(generate_prediction(match_info))
 
     except Exception as e:
         return jsonify({"error": "An error occurred while processing the request", "message": str(e)}), 500
@@ -624,11 +645,14 @@ def predict_result():
 @app.route('/live_matches')
 def live_matches():
     url = "https://cricbuzz-cricket.p.rapidapi.com/matches/v1/recent"
+    api_key = os.getenv('RAPIDAPI_KEY')
+    if not api_key:
+        return jsonify({"error": "Live-match service is not configured"}), 503
     try:
         response = requests.get(url, headers={
-            'x-rapidapi-key': "b4010528d4msh2f954e0d2c08bbcp1f65aejsn4044e0015e66",
+            'x-rapidapi-key': api_key,
             'x-rapidapi-host': "cricbuzz-cricket.p.rapidapi.com"
-        })
+        }, timeout=10)
         if response.status_code == 200:
             data = response.json()
             return jsonify(data)
@@ -644,5 +668,10 @@ def index():
     return render_template('home.html')
 
 
+@app.route('/health')
+def health():
+    return jsonify({"status": "ok"})
+
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', '5000')), debug=False)

@@ -1,0 +1,55 @@
+/* Calm, product-like empty state: no scanning, orbiting or rotating effects. */
+[hidden] {
+  display: none !important;
+}
+
+.empty-result {
+  min-height: 250px;
+  justify-content: flex-start;
+  padding-top: 36px;
+}
+
+.preview-match {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.preview-match span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 66px;
+  padding: 12px;
+  border: 1px solid rgba(67, 237, 131, 0.12);
+  border-radius: 13px;
+  background: rgba(67, 237, 131, 0.045);
+  color: #d7e5dc;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 12px;
+  text-align: center;
+}
+
+.preview-match b {
+  color: #63766a;
+  font-size: 10px;
+}
+
+@media (max-width: 480px) {
+  .preview-match {
+    padding: 14px;
+    gap: 8px;
+  }
+
+  .preview-match span {
+    min-height: 58px;
+    padding: 9px;
+    font-size: 10px;
+  }
+}

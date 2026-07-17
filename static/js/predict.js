@@ -1,185 +1,172 @@
-function showAlert(message) {
-    const errorMessage = document.getElementById('error-message');
-    errorMessage.textContent = message;
-    errorMessage.style.display = 'block';
-
-    setTimeout(() => {
-        errorMessage.style.display = 'none';
-    }, 3000);
-}
-
 document.addEventListener('DOMContentLoaded', () => {
-    fetch('/dropdown_data')
-        .then(response => response.json())
-        .then(data => {
-            const team1Dropdown = document.getElementById('team1');
-            data.team1.forEach(team => {
-                const option = document.createElement('option');
-                option.value = team.name;
-                option.textContent = team.name;
-                team1Dropdown.appendChild(option);
-            });
+  const form = document.getElementById('prediction-form');
+  const button = document.getElementById('predict-button');
+  const summary = document.getElementById('error-summary');
+  const team1 = document.getElementById('team1');
+  const team2 = document.getElementById('team2');
+  const city = document.getElementById('city');
+  const tossWinner = document.getElementById('toss_winner');
+  let submitting = false;
 
-            const team2Dropdown = document.getElementById('team2');
-            data.team2.forEach(team => {
-                const option = document.createElement('option');
-                option.value = team.name;
-                option.textContent = team.name;
-                team2Dropdown.appendChild(option);
-            });
+  const initials = name => name.split(/\s+/).map(word => word[0]).join('').slice(0, 3).toUpperCase();
+  const option = value => {
+    const item = document.createElement('option');
+    item.value = value;
+    item.textContent = value;
+    return item;
+  };
 
-            const cityDropdown = document.getElementById('city');
-            data.cities.forEach(city => {
-                const option = document.createElement('option');
-                option.value = city;
-                option.textContent = city;
-                cityDropdown.appendChild(option);
-            });
-        })
-        .catch(error => {
-            console.error("Error loading data:", error);
-            showAlert("Error loading dropdown data. Please try again later.");
-        });
-});
+  function showSummary(message) {
+    summary.textContent = message;
+    summary.hidden = false;
+    summary.focus();
+  }
 
-function updateTossOptions() {
-    const team1 = document.getElementById('team1').value;
-    const team2 = document.getElementById('team2').value;
-    const tossWinnerSelect = document.getElementById('toss_winner');
-    tossWinnerSelect.innerHTML = `<option value="" disabled selected>Select Toss Winner</option>`;
-
-    if (team1 && team2) {
-        const option1 = document.createElement('option');
-        option1.value = team1;
-        option1.textContent = team1;
-
-        const option2 = document.createElement('option');
-        option2.value = team2;
-        option2.textContent = team2;
-
-        tossWinnerSelect.appendChild(option1);
-        tossWinnerSelect.appendChild(option2);
-    }
-}
-
-async function predict() {
-    const team1 = document.getElementById('team1').value;
-    const team2 = document.getElementById('team2').value;
-    const city = document.getElementById('city').value;
-    const required_runs = document.getElementById('required_runs').value;
-    const remaining_overs = document.getElementById('remaining_overs').value;
-    const remaining_wickets = document.getElementById('remaining_wickets').value;
-    const toss_winner = document.getElementById('toss_winner').value;
-    const toss_decision = document.getElementById('toss_decision').value;
-    const target_runs = document.getElementById('target_runs').value;
-
-    if (!team1 || !team2 || team1 === team2) {
-        showAlert('Please select two different teams.');
-        return;
-    }
-
-    if (!city) {
-        showAlert('Please select a city.');
-        return;
-    }
-
-    //if (required_runs <= 0 || required_runs > target_runs) {
-        //showAlert('Please enter a valid number for required runs.');
-       // return;
-   // }
-
-    if (!remaining_overs || remaining_overs <= 0) {
-        showAlert('Please enter a valid number for remaining overs.');
-        return;
-    }
-
-    if (!remaining_wickets || remaining_wickets < 0) {
-        showAlert('Please enter a valid number for remaining wickets.');
-        return;
-    }
-
-    if (!target_runs || target_runs <= 0) {
-        showAlert('Please enter a valid number for target runs.');
-        return;
-    }
-
-    const predictionData = {
-        team1: team1,
-        team2: team2,
-        city: city,
-        required_runs: required_runs,
-        remaining_overs: remaining_overs,
-        remaining_wickets: remaining_wickets,
-        toss_winner: toss_winner,
-        toss_decision: toss_decision,
-        target_runs: target_runs
-    };
-
-    try {
-        const response = await fetch('/predict/result', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(predictionData)
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const result = data.team1_win_probability > 50
-            ? `${data.team1} has a higher chance of winning!`
-            : `${data.team2} has a higher chance of winning!`;
-
-        const probability = data.team1_win_probability;
-        displayPrediction(result, probability, team1, team2);
-
-        scrollToProbabilitySection();
-    } catch (error) {
-        console.error('Error during prediction:', error);
-        showAlert('An error occurred while making the prediction. Please try again.');
-    }
-}
-
-function displayPrediction(result, probability, team1Name, team2Name) {
-    const winProbabilitySection = document.getElementById('win-probability');
-    const probabilityChart = document.getElementById('probability-chart');
-    probabilityChart.innerHTML = '';
-
-    winProbabilitySection.style.display = 'block';
-
-    const chartHTML = `
-        <div class="probability-bar-container">
-            <div class="team-name left">${team1Name}</div>
-            <div class="probability-bar-background">
-                <div class="probability-bar" style="width: ${probability}%;"></div>
-            </div>
-            <div class="team-name right">${team2Name}</div>
-        </div>
-        <div class="probability-text">
-            <span>${probability}%</span> vs <span>${100 - probability}%</span>
-        </div>`;
-
-    probabilityChart.innerHTML = chartHTML;
-
-    const resultText = document.createElement("p");
-    resultText.textContent = result;
-    resultText.style.textAlign = "center";
-    resultText.style.fontWeight = "bold";
-    resultText.style.color = "#333";
-    winProbabilitySection.appendChild(resultText);
-}
-
-function scrollToProbabilitySection() {
-    const winProbabilitySection = document.getElementById('win-probability');
-    winProbabilitySection.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
+  function clearErrors() {
+    summary.hidden = true;
+    document.querySelectorAll('.field-error').forEach(item => item.textContent = '');
+    document.querySelectorAll('.invalid').forEach(item => {
+      item.classList.remove('invalid');
+      item.removeAttribute('aria-invalid');
     });
-}
+  }
 
-window.onload = function() {
-    updateTossOptions();
-};
+  function showFieldErrors(fields = {}) {
+    Object.entries(fields).forEach(([name, message]) => {
+      const input = document.getElementById(name);
+      const error = document.getElementById(`${name}-error`);
+      if (input) {
+        input.classList.add('invalid');
+        input.setAttribute('aria-invalid', 'true');
+      }
+      if (error) error.textContent = message;
+    });
+  }
+
+  function updateTossOptions() {
+    const previous = tossWinner.value;
+    tossWinner.replaceChildren(option(''));
+    tossWinner.options[0].textContent = team1.value && team2.value ? 'Choose toss winner' : 'Select teams first';
+    [team1.value, team2.value].filter(Boolean).forEach(name => tossWinner.appendChild(option(name)));
+    tossWinner.disabled = !(team1.value && team2.value && team1.value !== team2.value);
+    if ([team1.value, team2.value].includes(previous)) tossWinner.value = previous;
+    document.getElementById('preview-team1').textContent = team1.value || 'Team 1';
+    document.getElementById('preview-team2').textContent = team2.value || 'Team 2';
+  }
+
+  function updateRequiredRate() {
+    const runs = Number(document.getElementById('required_runs').value);
+    const balls = Number(document.getElementById('balls_remaining').value);
+    document.getElementById('rrr-preview').textContent = runs >= 0 && balls > 0 ? (runs * 6 / balls).toFixed(2) : '—';
+  }
+
+  async function loadOptions() {
+    try {
+      const response = await fetch('/dropdown_data', { headers: { Accept: 'application/json' } });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error?.message || 'Model data unavailable');
+      data.teams.forEach(team => {
+        team1.appendChild(option(team.name));
+        team2.appendChild(option(team.name));
+      });
+      data.cities.forEach(name => city.appendChild(option(name)));
+    } catch (error) {
+      showSummary(error.message || 'Could not load teams and cities.');
+      button.disabled = true;
+    }
+  }
+
+  function clientValidation(payload) {
+    const fields = {};
+    ['team1', 'team2', 'city', 'toss_winner', 'toss_decision'].forEach(key => {
+      if (!payload[key]) fields[key] = 'This field is required.';
+    });
+    if (payload.team1 && payload.team1 === payload.team2) fields.team2 = 'Choose a different team.';
+    if (payload.toss_winner && ![payload.team1, payload.team2].includes(payload.toss_winner)) fields.toss_winner = 'Choose one of the selected teams.';
+    if (!Number.isInteger(payload.target_runs) || payload.target_runs <= 0) fields.target_runs = 'Enter a target greater than zero.';
+    if (!Number.isInteger(payload.required_runs) || payload.required_runs < 0) fields.required_runs = 'Enter zero or more runs.';
+    if (payload.required_runs > payload.target_runs) fields.required_runs = 'Required runs cannot exceed the target.';
+    if (!Number.isInteger(payload.balls_remaining) || payload.balls_remaining < 1 || payload.balls_remaining > 120) fields.balls_remaining = 'Enter 1 to 120 balls.';
+    if (!Number.isInteger(payload.wickets_remaining) || payload.wickets_remaining < 0 || payload.wickets_remaining > 10) fields.wickets_remaining = 'Enter 0 to 10 wickets.';
+    return fields;
+  }
+
+  function payloadFromForm() {
+    const values = Object.fromEntries(new FormData(form));
+    ['target_runs', 'required_runs', 'balls_remaining', 'wickets_remaining'].forEach(key => values[key] = Number(values[key]));
+    return values;
+  }
+
+  function renderResult(data) {
+    const result = data.prediction;
+    const context = data.match_context;
+    document.getElementById('empty-result').hidden = true;
+    document.getElementById('prediction-result').hidden = false;
+    document.getElementById('result-status').textContent = 'Estimate calculated from the supplied scenario.';
+    document.getElementById('team1-result').textContent = result.team1;
+    document.getElementById('team2-result').textContent = result.team2;
+    document.getElementById('team1-badge').textContent = initials(result.team1);
+    document.getElementById('team2-badge').textContent = initials(result.team2);
+    document.getElementById('team1-probability').textContent = `${result.team1_probability.toFixed(2)}%`;
+    document.getElementById('team2-probability').textContent = `${result.team2_probability.toFixed(2)}%`;
+    document.getElementById('probability-bar').style.width = `${result.team1_probability}%`;
+    document.getElementById('predicted-winner').textContent = result.predicted_winner;
+    document.getElementById('context-runs').textContent = `${context.required_runs} runs`;
+    document.getElementById('context-balls').textContent = `${context.balls_remaining} balls`;
+    document.getElementById('context-wickets').textContent = `${context.wickets_remaining} in hand`;
+    document.getElementById('context-rrr').textContent = context.required_run_rate.toFixed(2);
+    document.getElementById('model-version').textContent = data.model.version;
+    document.getElementById('latency').textContent = `${data.latency_ms.toFixed(2)} ms`;
+    document.getElementById('disclaimer').textContent = data.model.disclaimer;
+    document.getElementById('result-card').focus({ preventScroll: true });
+    document.getElementById('result-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  team1.addEventListener('change', updateTossOptions);
+  team2.addEventListener('change', updateTossOptions);
+  document.getElementById('required_runs').addEventListener('input', updateRequiredRate);
+  document.getElementById('balls_remaining').addEventListener('input', updateRequiredRate);
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (submitting) return;
+    clearErrors();
+    const payload = payloadFromForm();
+    const fields = clientValidation(payload);
+    if (Object.keys(fields).length) {
+      showFieldErrors(fields);
+      showSummary('Please correct the highlighted fields.');
+      return;
+    }
+    submitting = true;
+    button.disabled = true;
+    button.classList.add('loading');
+    button.querySelector('.button-label').textContent = 'Calculating…';
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const response = await fetch('/predict/result', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        showFieldErrors(data.error?.fields);
+        throw new Error(data.error?.message || 'Prediction failed.');
+      }
+      renderResult(data);
+    } catch (error) {
+      showSummary(error.name === 'AbortError' ? 'The prediction timed out. Please try again.' : error.message);
+    } finally {
+      clearTimeout(timeout);
+      submitting = false;
+      button.disabled = false;
+      button.classList.remove('loading');
+      button.querySelector('.button-label').textContent = 'Calculate probability';
+    }
+  });
+
+  loadOptions();
+});

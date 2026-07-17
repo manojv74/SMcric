@@ -18,9 +18,10 @@
 #match-panel{overflow:hidden;transition:transform .18s ease-out}
 .panel-scan{position:absolute;left:0;right:0;top:-80px;height:70px;background:linear-gradient(transparent,rgba(67,237,131,.08),transparent);animation:scan 6s ease-in-out infinite;pointer-events:none}
 .probability-track span{box-shadow:0 0 18px rgba(67,237,131,.45);transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.match-metrics{grid-template-columns:repeat(4,1fr)}
 @keyframes ticker{to{transform:translateX(-50%)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes float{50%{margin-top:-9px}}
 @keyframes scan{0%,15%{top:-80px}70%,100%{top:110%}}
-@media(max-width:650px){.cursor-glow,.orbit,.floating-chip{display:none}}
+@media(max-width:650px){.cursor-glow,.orbit,.floating-chip{display:none}.match-metrics{grid-template-columns:repeat(2,1fr)}}
 @media(prefers-reduced-motion:reduce){.ticker-track,.orbit,.floating-chip,.panel-scan{animation:none!important}}

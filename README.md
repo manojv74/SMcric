@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-111111?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-1.9-F7931E?logo=scikitlearn&logoColor=white)](https://scikit-learn.org/)
-[![Tests](https://img.shields.io/badge/tests-10%20passing-43ed83)](#testing)
+
 
 SMcric is a machine-learning web application that estimates IPL match outcomes from historical match records and a supplied second-innings situation. It combines a calibrated pre-match classifier with a bounded chase-situation estimate and presents the result through a responsive Flask interface.
 
@@ -137,8 +137,7 @@ pip install -r requirements.txt
 python mn.py
 ```
 
-Open [http://127.0.0.1:5000](http://127.0.0.1:5000).
-
+Open https://smcric.onrender.com
 ## Offline model training
 
 The committed bundle can be used directly. Retrain only after intentionally changing the dataset, features or model configuration:
@@ -282,15 +281,10 @@ Health check: /health
 
 Add `RAPIDAPI_KEY` through the hosting provider’s environment settings. The trained `predictor_bundle.pkl` must already be present in the deployment artifact; deployment must not retrain the model.
 
-## Current limitation
-
-The dataset contains completed match-level records, not labelled ball-by-ball states. The displayed percentage therefore combines a calibrated pre-match classifier with a bounded and documented chase-situation estimate. It should be interpreted as an analytical estimate, not a guaranteed outcome or a fully trained ball-by-ball live model.
-
-A future model version can replace this component after training on innings-level or delivery-level data with outcomes attached to every match state.
 
 ## Author
 
 **Manoj V**  
-Computer Science Engineering graduate with a specialization in Data Science  
+
 [GitHub](https://github.com/manojv74) · [LinkedIn](https://www.linkedin.com/in/manoj-v74/)
 

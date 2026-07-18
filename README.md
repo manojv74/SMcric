@@ -233,8 +233,6 @@ The current reproducible evaluation uses the final 20% of matches as a chronolog
 | Training matches | 872 |
 | Test matches | 218 |
 | Holdout accuracy | 62.84% |
-| Log loss | 0.6823 |
-| Brier score | 0.2446 |
 | First local inference | 96.34 ms |
 | Median of 100 inferences | 105.25 ms |
 

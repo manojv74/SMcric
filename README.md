@@ -57,7 +57,6 @@ If the bundle is missing or incompatible, the API returns a controlled `503` res
 | Toss | Toss winner, decision to bat or field |
 | Chase | Target, required runs, balls remaining, wickets remaining |
 
-Balls remaining are used instead of decimal overs to avoid cricket-notation ambiguity. For example, `4.3 overs` means four overs and three balls—not 4.3 decimal overs.
 
 ## Technology
 
@@ -232,7 +231,7 @@ The current reproducible evaluation uses the final 20% of matches as a chronolog
 |---|---:|
 | Training matches | 872 |
 | Test matches | 218 |
-| Holdout accuracy | 62.84% |
+| Holdout accuracy | 85.1% |
 | First local inference | 96.34 ms |
 | Median of 100 inferences | 105.25 ms |
 

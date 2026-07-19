@@ -62,19 +62,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadOptions() {
     try {
-      const response = await fetch('/dropdown_data', { headers: { Accept: 'application/json' } });
+      const response = await fetch('/dropdown_data', {
+        headers: { Accept: 'application/json' }
+      });
+
       const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error?.message || 'Model data unavailable');
-      data.teams.forEach(team => {
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Dropdown data unavailable');
+      }
+
+      data.team1.forEach(team => {
         team1.appendChild(option(team.name));
+      });
+
+      data.team2.forEach(team => {
         team2.appendChild(option(team.name));
       });
-      data.cities.forEach(name => city.appendChild(option(name)));
+
+      data.cities.forEach(name => {
+        city.appendChild(option(name));
+      });
     } catch (error) {
       showSummary(error.message || 'Could not load teams and cities.');
       button.disabled = true;
     }
   }
+
+  
+  
 
   function clientValidation(payload) {
     const fields = {};

@@ -57,12 +57,12 @@
             <div class="field-grid">
               <div class="field"><label for="target_runs">Target runs</label><input id="target_runs" name="target_runs" type="number" min="1" max="400" step="1" placeholder="e.g. 181" required><small class="field-error" id="target_runs-error"></small></div>
               <div class="field"><label for="required_runs">Required runs</label><input id="required_runs" name="required_runs" type="number" min="0" max="400" step="1" placeholder="e.g. 42" required><small class="field-error" id="required_runs-error"></small></div>
-              <div class="field"><label for="balls_remaining">Balls remaining</label><input id="balls_remaining" name="balls_remaining" type="number" min="1" max="120" step="1" placeholder="e.g. 28" required><span class="field-help">Use balls to avoid cricket-decimal confusion.</span><small class="field-error" id="balls_remaining-error"></small></div>
-              <div class="field"><label for="wickets_remaining">Wickets remaining</label><input id="wickets_remaining" name="wickets_remaining" type="number" min="0" max="10" step="1" placeholder="e.g. 6" required><small class="field-error" id="wickets_remaining-error"></small></div>
+              <div class="field"><label for="remaining_overs">Remaining overs</label><input id="remaining_overs" name="remaining_overs" type="number" min="0.01" max="20" step="0.01" placeholder="e.g. 4.67" required><span class="field-help">Enter decimal overs, for example 4.67 for 28 balls.</span><small class="field-error" id="remaining_overs-error"></small></div>
+              <div class="field"><label for="wickets_lost">Wickets lost</label><input id="wickets_lost" name="wickets_lost" type="number" min="0" max="10" step="1" placeholder="e.g. 4" required><small class="field-error" id="wickets_lost-error"></small></div>
             </div>
           </fieldset>
 
-          <div class="live-metrics"><div><span>Required run rate</span><strong id="rrr-preview">—</strong></div><p>Calculated automatically from required runs and balls remaining.</p></div>
+          <div class="live-metrics"><div><span>Required run rate</span><strong id="rrr-preview">—</strong></div><p>Calculated automatically from required runs and remaining overs.</p></div>
           <button class="predict-button" id="predict-button" type="submit"><span class="button-label">Calculate probability</span><span class="spinner" aria-hidden="true"></span><b aria-hidden="true">→</b></button>
         </form>
       </section>
@@ -80,7 +80,7 @@
           <div class="result-teams"><div><span class="team-badge" id="team1-badge">T1</span><strong id="team1-result">Team 1</strong><b id="team1-probability">0%</b></div><span>VS</span><div><span class="team-badge alt" id="team2-badge">T2</span><strong id="team2-result">Team 2</strong><b id="team2-probability">0%</b></div></div>
           <div class="probability-track" aria-label="Team 1 probability"><span id="probability-bar"></span></div>
           <div class="winner-call"><span>Estimated advantage</span><strong id="predicted-winner">—</strong></div>
-          <div class="context-grid"><div><span>Need</span><strong id="context-runs">—</strong></div><div><span>Remaining</span><strong id="context-balls">—</strong></div><div><span>Wickets</span><strong id="context-wickets">—</strong></div><div><span>Required rate</span><strong id="context-rrr">—</strong></div></div>
+          <div class="context-grid"><div><span>Need</span><strong id="context-runs">—</strong></div><div><span>Overs remaining</span><strong id="context-overs">—</strong></div><div><span>Wickets lost</span><strong id="context-wickets-lost">—</strong></div><div><span>Required rate</span><strong id="context-rrr">—</strong></div></div>
           <div class="result-meta"><span>Model <b id="model-version">—</b></span><span>Inference <b id="latency">—</b></span></div>
           <p class="disclaimer" id="disclaimer">This is an estimate, not a guaranteed outcome.</p>
         </div>

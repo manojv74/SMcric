@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function clearErrors() {
     summary.hidden = true;
-    document.querySelectorAll('.field-error').forEach(item => item.textContent = '');
+    document.querySelectorAll('.field-error').forEach(item => { item.textContent = ''; });
     document.querySelectorAll('.invalid').forEach(item => {
       item.classList.remove('invalid');
       item.removeAttribute('aria-invalid');
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function showFieldErrors(fields = {}) {
-    Object.entries(fields).forEach(([name, message]) => {
+    Object.entries(fields || {}).forEach(([name, message]) => {
       const input = document.getElementById(name);
       const error = document.getElementById(`${name}-error`);
       if (input) {
@@ -56,68 +56,88 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateRequiredRate() {
     const runs = Number(document.getElementById('required_runs').value);
-    const balls = Number(document.getElementById('balls_remaining').value);
-    document.getElementById('rrr-preview').textContent = runs >= 0 && balls > 0 ? (runs * 6 / balls).toFixed(2) : '—';
+    const overs = Number(document.getElementById('remaining_overs').value);
+    document.getElementById('rrr-preview').textContent = runs >= 0 && overs > 0 ? (runs / overs).toFixed(2) : '—';
   }
 
   async function loadOptions() {
     try {
       const response = await fetch('/dropdown_data', { headers: { Accept: 'application/json' } });
       const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error?.message || 'Model data unavailable');
-      data.teams.forEach(team => {
-        team1.appendChild(option(team.name));
-        team2.appendChild(option(team.name));
-      });
-      data.cities.forEach(name => city.appendChild(option(name)));
+      if (!response.ok) throw new Error(data.message || 'Dropdown data unavailable');
+      (data.team1 || []).forEach(team => team1.appendChild(option(team.name)));
+      (data.team2 || []).forEach(team => team2.appendChild(option(team.name)));
+      (data.cities || []).forEach(name => city.appendChild(option(name)));
     } catch (error) {
       showSummary(error.message || 'Could not load teams and cities.');
       button.disabled = true;
     }
   }
 
-  function clientValidation(payload) {
+  function clientValidation(values) {
     const fields = {};
     ['team1', 'team2', 'city', 'toss_winner', 'toss_decision'].forEach(key => {
-      if (!payload[key]) fields[key] = 'This field is required.';
+      if (!values[key]) fields[key] = 'This field is required.';
     });
-    if (payload.team1 && payload.team1 === payload.team2) fields.team2 = 'Choose a different team.';
-    if (payload.toss_winner && ![payload.team1, payload.team2].includes(payload.toss_winner)) fields.toss_winner = 'Choose one of the selected teams.';
-    if (!Number.isInteger(payload.target_runs) || payload.target_runs <= 0) fields.target_runs = 'Enter a target greater than zero.';
-    if (!Number.isInteger(payload.required_runs) || payload.required_runs < 0) fields.required_runs = 'Enter zero or more runs.';
-    if (payload.required_runs > payload.target_runs) fields.required_runs = 'Required runs cannot exceed the target.';
-    if (!Number.isInteger(payload.balls_remaining) || payload.balls_remaining < 1 || payload.balls_remaining > 120) fields.balls_remaining = 'Enter 1 to 120 balls.';
-    if (!Number.isInteger(payload.wickets_remaining) || payload.wickets_remaining < 0 || payload.wickets_remaining > 10) fields.wickets_remaining = 'Enter 0 to 10 wickets.';
+    if (values.team1 && values.team1 === values.team2) fields.team2 = 'Choose a different team.';
+    if (values.toss_winner && ![values.team1, values.team2].includes(values.toss_winner)) fields.toss_winner = 'Choose one of the selected teams.';
+    if (!Number.isInteger(values.target_runs) || values.target_runs <= 0) fields.target_runs = 'Enter a target greater than zero.';
+    if (!Number.isInteger(values.required_runs) || values.required_runs < 0) fields.required_runs = 'Enter zero or more runs.';
+    if (values.required_runs > values.target_runs) fields.required_runs = 'Required runs cannot exceed the target.';
+    if (!Number.isFinite(values.remaining_overs) || values.remaining_overs <= 0 || values.remaining_overs > 20) fields.remaining_overs = 'Enter remaining overs from 0.01 to 20.';
+    if (!Number.isInteger(values.wickets_lost) || values.wickets_lost < 0 || values.wickets_lost > 10) fields.wickets_lost = 'Enter 0 to 10 wickets lost.';
     return fields;
   }
 
-  function payloadFromForm() {
+  function valuesFromForm() {
     const values = Object.fromEntries(new FormData(form));
-    ['target_runs', 'required_runs', 'balls_remaining', 'wickets_remaining'].forEach(key => values[key] = Number(values[key]));
+    ['target_runs', 'required_runs', 'remaining_overs', 'wickets_lost'].forEach(key => {
+      values[key] = Number(values[key]);
+    });
     return values;
   }
 
-  function renderResult(data) {
-    const result = data.prediction;
-    const context = data.match_context;
+  function backendPayload(values) {
+    return {
+      team1: values.team1,
+      team2: values.team2,
+      city: values.city,
+      toss_winner: values.toss_winner,
+      toss_decision: values.toss_decision,
+      target_runs: values.target_runs,
+      required_runs: values.required_runs,
+      remaining_overs: values.remaining_overs,
+      wickets_lost: values.wickets_lost,
+    };
+  }
+
+  function renderResult(data, values) {
+    const team1Probability = Number(data.team1_win_probability);
+    const team2Probability = Number(data.team2_win_probability);
+    if (!Number.isFinite(team1Probability) || !Number.isFinite(team2Probability)) {
+      throw new Error('The server returned an invalid prediction.');
+    }
+
+    const predictedWinner = team1Probability >= team2Probability ? data.team1 : data.team2;
+    const requiredRate = values.required_runs / values.remaining_overs;
     document.getElementById('empty-result').hidden = true;
     document.getElementById('prediction-result').hidden = false;
     document.getElementById('result-status').textContent = 'Estimate calculated from the supplied scenario.';
-    document.getElementById('team1-result').textContent = result.team1;
-    document.getElementById('team2-result').textContent = result.team2;
-    document.getElementById('team1-badge').textContent = initials(result.team1);
-    document.getElementById('team2-badge').textContent = initials(result.team2);
-    document.getElementById('team1-probability').textContent = `${result.team1_probability.toFixed(2)}%`;
-    document.getElementById('team2-probability').textContent = `${result.team2_probability.toFixed(2)}%`;
-    document.getElementById('probability-bar').style.width = `${result.team1_probability}%`;
-    document.getElementById('predicted-winner').textContent = result.predicted_winner;
-    document.getElementById('context-runs').textContent = `${context.required_runs} runs`;
-    document.getElementById('context-balls').textContent = `${context.balls_remaining} balls`;
-    document.getElementById('context-wickets').textContent = `${context.wickets_remaining} in hand`;
-    document.getElementById('context-rrr').textContent = context.required_run_rate.toFixed(2);
-    document.getElementById('model-version').textContent = data.model.version;
-    document.getElementById('latency').textContent = `${data.latency_ms.toFixed(2)} ms`;
-    document.getElementById('disclaimer').textContent = data.model.disclaimer;
+    document.getElementById('team1-result').textContent = data.team1;
+    document.getElementById('team2-result').textContent = data.team2;
+    document.getElementById('team1-badge').textContent = initials(data.team1);
+    document.getElementById('team2-badge').textContent = initials(data.team2);
+    document.getElementById('team1-probability').textContent = `${team1Probability.toFixed(2)}%`;
+    document.getElementById('team2-probability').textContent = `${team2Probability.toFixed(2)}%`;
+    document.getElementById('probability-bar').style.width = `${Math.max(0, Math.min(100, team1Probability))}%`;
+    document.getElementById('predicted-winner').textContent = predictedWinner;
+    document.getElementById('context-runs').textContent = `${values.required_runs} runs`;
+    document.getElementById('context-overs').textContent = `${values.remaining_overs} overs`;
+    document.getElementById('context-wickets-lost').textContent = `${values.wickets_lost}`;
+    document.getElementById('context-rrr').textContent = requiredRate.toFixed(2);
+    document.getElementById('model-version').textContent = 'SMcric';
+    document.getElementById('latency').textContent = 'Complete';
+    document.getElementById('disclaimer').textContent = 'This is an estimate, not a guaranteed outcome.';
     document.getElementById('result-card').focus({ preventScroll: true });
     document.getElementById('result-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -125,38 +145,36 @@ document.addEventListener('DOMContentLoaded', () => {
   team1.addEventListener('change', updateTossOptions);
   team2.addEventListener('change', updateTossOptions);
   document.getElementById('required_runs').addEventListener('input', updateRequiredRate);
-  document.getElementById('balls_remaining').addEventListener('input', updateRequiredRate);
+  document.getElementById('remaining_overs').addEventListener('input', updateRequiredRate);
 
   form.addEventListener('submit', async event => {
     event.preventDefault();
     if (submitting) return;
     clearErrors();
-    const payload = payloadFromForm();
-    const fields = clientValidation(payload);
+    const values = valuesFromForm();
+    const fields = clientValidation(values);
     if (Object.keys(fields).length) {
       showFieldErrors(fields);
       showSummary('Please correct the highlighted fields.');
       return;
     }
+
     submitting = true;
     button.disabled = true;
     button.classList.add('loading');
     button.querySelector('.button-label').textContent = 'Calculating…';
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 60000);
     try {
       const response = await fetch('/predict/result', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(backendPayload(values)),
         signal: controller.signal,
       });
       const data = await response.json();
-      if (!response.ok || !data.success) {
-        showFieldErrors(data.error?.fields);
-        throw new Error(data.error?.message || 'Prediction failed.');
-      }
-      renderResult(data);
+      if (!response.ok || data.error) throw new Error(data.message || data.error || 'Prediction failed.');
+      renderResult(data, values);
     } catch (error) {
       showSummary(error.name === 'AbortError' ? 'The prediction timed out. Please try again.' : error.message);
     } finally {

@@ -1,140 +1,114 @@
 from pathlib import Path
-import sys
+import re
 
-import numpy as np
-import pandas as pd
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 import mn
-from predictor import (
-    BUNDLE_SCHEMA_VERSION,
-    FEATURE_COLUMNS,
-    PredictionResult,
-    PredictorError,
-    PredictorService,
-    load_bundle,
-    save_bundle,
-    train_bundle,
-)
 
 
-class FakeEstimator:
-    classes_ = np.array([0, 1])
-
-    def predict_proba(self, frame):
-        return np.array([[0.45, 0.55] for _ in range(len(frame))])
-
-
-def fake_bundle():
-    return {
-        "schema_version": BUNDLE_SCHEMA_VERSION,
-        "model_version": "test-1",
-        "trained_at": "2026-01-01T00:00:00+00:00",
-        "dataset_fingerprint": "test",
-        "feature_columns": FEATURE_COLUMNS,
-        "class_mapping": {"0": "team2_win", "1": "team1_win"},
-        "known_teams": ["Alpha", "Beta"],
-        "known_cities": ["Bengaluru"],
-        "known_toss_decisions": ["bat", "field"],
-        "estimator": FakeEstimator(),
-        "metrics": {"accuracy": 0.5},
-    }
+ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture()
-def client(monkeypatch):
-    monkeypatch.setattr(mn, "predictor", PredictorService(fake_bundle()))
+def client():
     mn.app.config.update(TESTING=True)
     return mn.app.test_client()
 
 
 def valid_payload():
     return {
-        "team1": "Alpha",
-        "team2": "Beta",
+        "team1": "Royal Challengers Bengaluru",
+        "team2": "Chennai Super Kings",
         "city": "Bengaluru",
-        "toss_winner": "Alpha",
+        "toss_winner": "Royal Challengers Bengaluru",
         "toss_decision": "bat",
         "target_runs": 181,
         "required_runs": 42,
-        "balls_remaining": 28,
-        "wickets_remaining": 6,
+        "remaining_overs": 4.67,
+        "wickets_lost": 4,
     }
 
 
-def test_bundle_round_trip(tmp_path):
-    path = tmp_path / "bundle.pkl"
-    save_bundle(fake_bundle(), path)
-    loaded = load_bundle(path)
-    assert loaded["schema_version"] == BUNDLE_SCHEMA_VERSION
-    assert set(loaded) >= {"estimator", "feature_columns", "known_teams", "metrics"}
+def test_prediction_route_uses_mn_contract(client, monkeypatch):
+    captured = {}
 
+    def fake_main(match_info):
+        captured.update(match_info)
+        return mn.jsonify(
+            team1=match_info["team1"],
+            team2=match_info["team2"],
+            team1_win_probability=52.73,
+            team2_win_probability=47.27,
+        )
 
-def test_missing_bundle_is_controlled(tmp_path):
-    with pytest.raises(PredictorError, match="missing"):
-        load_bundle(tmp_path / "missing.pkl")
-
-
-def test_prediction_route_returns_consistent_probabilities(client):
+    monkeypatch.setattr(mn, "main", fake_main)
     response = client.post("/predict/result", json=valid_payload())
+
     assert response.status_code == 200
-    body = response.get_json()
-    assert body["success"] is True
-    prediction = body["prediction"]
-    assert prediction["team1_probability"] + prediction["team2_probability"] == pytest.approx(100)
-    assert body["latency_ms"] >= 0
-    assert body["match_context"]["required_run_rate"] == 9.0
+    assert captured["remaining_overs"] == pytest.approx(4.67)
+    assert captured["wickets_lost"] == 4
+    assert captured["target_overs"] == 20
+    assert response.get_json()["team1_win_probability"] == pytest.approx(52.73)
 
 
 @pytest.mark.parametrize(
-    ("field", "value"),
-    [("team2", "Alpha"), ("wickets_remaining", 11), ("balls_remaining", 121), ("toss_winner", "Gamma")],
+    "field",
+    [
+        "team1",
+        "team2",
+        "city",
+        "required_runs",
+        "remaining_overs",
+        "wickets_lost",
+        "toss_winner",
+        "toss_decision",
+        "target_runs",
+    ],
 )
-def test_invalid_input_is_rejected(client, field, value):
+def test_missing_required_field_is_rejected(client, field):
     payload = valid_payload()
-    payload[field] = value
+    payload.pop(field)
     response = client.post("/predict/result", json=payload)
     assert response.status_code == 400
-    assert field in response.get_json()["error"]["fields"]
+    assert field in response.get_json()["fields"]
 
 
-def test_request_never_trains_or_fits(client, monkeypatch):
-    def forbidden(*args, **kwargs):
-        raise AssertionError("Training must never run during prediction")
-    monkeypatch.setattr("predictor.train_bundle", forbidden)
-    response = client.post("/predict/result", json=valid_payload())
+def test_dropdown_endpoint_returns_dataset_values(client):
+    response = client.get("/dropdown_data")
+    body = response.get_json()
     assert response.status_code == 200
+    assert body["team1"]
+    assert body["team2"]
+    assert "Bengaluru" in body["cities"]
 
 
-def test_chasing_team_mapping_changes_situation_direction():
-    service = PredictorService(fake_bundle())
-    first = valid_payload()
-    first["toss_winner"] = "Alpha"
-    first["toss_decision"] = "bat"  # Beta chases.
-    beta_chases = service.predict({**first, "target_overs": 20.0})
-    first["toss_decision"] = "field"  # Alpha chases.
-    alpha_chases = service.predict({**first, "target_overs": 20.0})
-    assert beta_chases.team1_probability < alpha_chases.team1_probability
+def test_frontend_fields_match_mn_contract():
+    html = (ROOT / "templates" / "predict.html").read_text(encoding="utf-8")
+    script = (ROOT / "static" / "js" / "predict.js").read_text(encoding="utf-8")
+
+    assert 'name="remaining_overs"' in html
+    assert 'name="wickets_lost"' in html
+    assert 'name="balls_remaining"' not in html
+    assert 'name="wickets_remaining"' not in html
+    assert "remaining_overs: values.remaining_overs" in script
+    assert "wickets_lost: values.wickets_lost" in script
 
 
-def test_offline_training_creates_complete_bundle():
-    rows = []
-    for index in range(60):
-        team1, team2 = ("Alpha", "Beta") if index % 2 == 0 else ("Beta", "Alpha")
-        rows.append({
-            "match_id": index,
-            "team1": team1,
-            "team2": team2,
-            "city": "Bengaluru" if index % 3 else "Chennai",
-            "toss_winner": team1 if index % 2 else team2,
-            "toss_decision": "bat" if index % 3 else "field",
-            "target_runs": 150 + index % 50,
-            "target_overs": 20.0,
-            "winner": team1 if index % 4 else team2,
-        })
-    bundle, metrics = train_bundle(pd.DataFrame(rows), "synthetic")
-    assert bundle["feature_columns"] == FEATURE_COLUMNS
-    assert set(bundle) >= {"estimator", "known_teams", "known_cities", "class_mapping", "metrics"}
-    assert set(metrics) >= {"accuracy", "log_loss", "brier_score", "confusion_matrix"}
+def test_frontend_reads_flat_mn_response():
+    script = (ROOT / "static" / "js" / "predict.js").read_text(encoding="utf-8")
+    assert "data.team1_win_probability" in script
+    assert "data.team2_win_probability" in script
+    assert "data.prediction" not in script
+    assert "data.success" not in script
+
+
+def test_supported_city_list_is_curated_and_known_to_dataset():
+    script = (ROOT / "static" / "js" / "predict.js").read_text(encoding="utf-8")
+    block = re.search(r"SUPPORTED_CITIES = new Set\(\[(.*?)\]\);", script, re.S)
+    assert block
+    supported = re.findall(r"'([^']+)'", block.group(1))
+
+    _, _, dataset_cities = mn.read_csv_data(ROOT / "output2.csv")
+    assert 1 < len(supported) < len(dataset_cities)
+    assert set(supported).issubset(set(dataset_cities))
+    assert "Unknown" not in supported

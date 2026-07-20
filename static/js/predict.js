@@ -8,6 +8,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const tossWinner = document.getElementById('toss_winner');
   let submitting = false;
 
+  // Keep the public form focused on supported Indian IPL host cities.
+  // Every value must also exist in output2.csv so mn.py can encode it.
+  const SUPPORTED_CITIES = new Set([
+    'Ahmedabad',
+    'Bengaluru',
+    'Chennai',
+    'Delhi',
+    'Dharamsala',
+    'Guwahati',
+    'Hyderabad',
+    'Jaipur',
+    'Kolkata',
+    'Lucknow',
+    'Mumbai',
+    'Visakhapatnam',
+  ]);
+
   const initials = name => name.split(/\s+/).map(word => word[0]).join('').slice(0, 3).toUpperCase();
   const option = value => {
     const item = document.createElement('option');
@@ -67,7 +84,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!response.ok) throw new Error(data.message || 'Dropdown data unavailable');
       (data.team1 || []).forEach(team => team1.appendChild(option(team.name)));
       (data.team2 || []).forEach(team => team2.appendChild(option(team.name)));
-      (data.cities || []).forEach(name => city.appendChild(option(name)));
+      (data.cities || [])
+        .filter(name => SUPPORTED_CITIES.has(name))
+        .sort((left, right) => left.localeCompare(right))
+        .forEach(name => city.appendChild(option(name)));
+
+      if (team1.options.length === 1 || team2.options.length === 1 || city.options.length === 1) {
+        throw new Error('Teams or supported cities are unavailable.');
+      }
     } catch (error) {
       showSummary(error.message || 'Could not load teams and cities.');
       button.disabled = true;
